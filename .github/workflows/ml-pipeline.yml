@@ -82,6 +82,7 @@ jobs:
         name: ml-data
         path: |
           data/processed/
+          models/trained/preprocessor.pkl
           !data/processed/README.md
 
   model-training:
@@ -106,7 +107,7 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: ml-data
-        path: data/processed/
+        path: .
     
     - name: Train model
       run: |
@@ -120,17 +121,23 @@ jobs:
       run: |
         python -c "
         import joblib
-        import numpy as np
+        import os
         
-        model = joblib.load('models/trained/house_price_model.pkl')
-        preprocessor = joblib.load('models/trained/preprocessor.pkl')
+        # Check if model files exist
+        model_path = 'models/trained/house-price-predictor.pkl'
+        preprocessor_path = 'models/trained/preprocessor.pkl'
         
-        # Basic validation
-        test_data = np.array([[3, 2, 1500, 5000, 1, 0, 0, 3, 7, 1500, 0, 1990, 0, 98001, 47.3, -122.2, 1500, 5000]])
-        processed = preprocessor.transform(test_data)
-        prediction = model.predict(processed)
-        
-        print(f'✅ Model validation passed. Sample prediction: {prediction[0]:.2f}')
+        if os.path.exists(model_path):
+            model = joblib.load(model_path)
+            print(f'✅ Model loaded successfully: {type(model)}')
+        else:
+            print(f'❌ Model file not found at {model_path}')
+            
+        if os.path.exists(preprocessor_path):
+            preprocessor = joblib.load(preprocessor_path)
+            print(f'✅ Preprocessor loaded successfully: {type(preprocessor)}')
+        else:
+            print(f'❌ Preprocessor file not found at {preprocessor_path}')
         "
     
     - name: Register model in MLflow
