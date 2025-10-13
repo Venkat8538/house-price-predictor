@@ -1,0 +1,178 @@
+name: ML Training Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      retrain:
+        description: 'Force model retraining'
+        required: false
+        default: 'false'
+        type: boolean
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'data/raw/**'
+      - 'src/data/**'
+      - 'src/features/**'
+      - 'src/models/**'
+      - 'configs/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'data/raw/**'
+      - 'src/data/**'
+      - 'src/features/**'
+      - 'src/models/**'
+      - 'configs/**'
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  data-pipeline:
+    runs-on: ubuntu-latest
+    outputs:
+      data-changed: ${{ steps.check-data.outputs.changed }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Check data changes
+      id: check-data
+      run: |
+        if git diff --name-only HEAD~1 HEAD | grep -E "(data/raw/|src/data/|src/features/)" || [ "${{ github.event.inputs.retrain }}" == "true" ]; then
+          echo "changed=true" >> $GITHUB_OUTPUT
+        else
+          echo "changed=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Process raw data
+      if: steps.check-data.outputs.changed == 'true'
+      run: python src/data/run_processing.py
+    
+    - name: Engineer features
+      if: steps.check-data.outputs.changed == 'true'
+      run: python src/features/engineer.py
+    
+    - name: Upload processed data
+      if: steps.check-data.outputs.changed == 'true'
+      uses: actions/upload-artifact@v3
+      with:
+        name: ml-data
+        path: |
+          data/processed/
+          !data/processed/README.md
+
+  model-training:
+    needs: [data-pipeline]
+    if: needs.data-pipeline.outputs.data-changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Download processed data
+      uses: actions/download-artifact@v3
+      with:
+        name: ml-data
+        path: data/processed/
+    
+    - name: Train model
+      run: python src/models/train_model.py
+    
+    - name: Validate trained model
+      run: |
+        python -c "
+        import joblib
+        import numpy as np
+        
+        model = joblib.load('models/trained/house_price_model.pkl')
+        preprocessor = joblib.load('models/trained/preprocessor.pkl')
+        
+        # Basic validation
+        test_data = np.array([[3, 2, 1500, 5000, 1, 0, 0, 3, 7, 1500, 0, 1990, 0, 98001, 47.3, -122.2, 1500, 5000]])
+        processed = preprocessor.transform(test_data)
+        prediction = model.predict(processed)
+        
+        print(f'✅ Model validation passed. Sample prediction: {prediction[0]:.2f}')
+        "
+    
+    - name: Register model in MLflow
+      env:
+        MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+        MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
+        MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
+      run: |
+        python -c "
+        import mlflow
+        import mlflow.sklearn
+        import joblib
+        import os
+        from datetime import datetime
+        
+        # Set MLflow tracking URI
+        mlflow.set_tracking_uri(os.getenv('MLFLOW_TRACKING_URI', 'http://localhost:5000'))
+        
+        # Load models
+        model = joblib.load('models/trained/house_price_model.pkl')
+        preprocessor = joblib.load('models/trained/preprocessor.pkl')
+        
+        # Start MLflow run
+        with mlflow.start_run(run_name=f'house-price-model-{datetime.now().strftime(\"%Y%m%d-%H%M%S\")}'):
+            # Log model
+            mlflow.sklearn.log_model(
+                sk_model=model,
+                artifact_path='model',
+                registered_model_name='house-price-predictor'
+            )
+            
+            # Log preprocessor
+            mlflow.sklearn.log_model(
+                sk_model=preprocessor,
+                artifact_path='preprocessor',
+                registered_model_name='house-price-preprocessor'
+            )
+            
+            # Log metadata
+            mlflow.log_param('git_commit', '${{ github.sha }}')
+            mlflow.log_param('branch', '${{ github.ref_name }}')
+            mlflow.log_param('workflow_run', '${{ github.run_id }}')
+            
+            print('✅ Models registered in MLflow')
+        "
+    
+    - name: Upload trained models
+      uses: actions/upload-artifact@v3
+      with:
+        name: trained-models
+        path: models/trained/
+    
+    - name: Commit updated models
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add models/trained/
+        git diff --staged --quiet || git commit -m "Update trained models [skip ci]"
+        git push
