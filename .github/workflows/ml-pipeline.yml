@@ -60,11 +60,20 @@ jobs:
     
     - name: Process raw data
       if: steps.check-data.outputs.changed == 'true'
-      run: python src/data/run_processing.py
+      run: |
+        python -c "
+        from src.data.run_processing import process_data
+        process_data('data/raw/house_data.csv', 'data/processed/cleaned_house_data.csv')
+        "
     
     - name: Engineer features
       if: steps.check-data.outputs.changed == 'true'
-      run: python src/features/engineer.py
+      run: |
+        mkdir -p models/trained
+        python src/features/engineer.py \
+          --input data/processed/cleaned_house_data.csv \
+          --output data/processed/featured_house_data.csv \
+          --preprocessor models/trained/preprocessor.pkl
     
     - name: Upload processed data
       if: steps.check-data.outputs.changed == 'true'
