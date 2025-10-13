@@ -109,7 +109,12 @@ jobs:
         path: data/processed/
     
     - name: Train model
-      run: python src/models/train_model.py
+      run: |
+        mkdir -p models/trained
+        python src/models/train_model.py \
+          --config configs/model_config.yaml \
+          --data data/processed/featured_house_data.csv \
+          --models-dir models
     
     - name: Validate trained model
       run: |
