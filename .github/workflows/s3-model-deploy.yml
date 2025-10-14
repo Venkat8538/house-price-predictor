@@ -1,0 +1,73 @@
+name: Deploy Model to S3
+
+on:
+  workflow_dispatch:
+    inputs:
+      model_version:
+        description: 'Model version timestamp to deploy (YYYYMMDD-HHMMSS-SHA)'
+        required: true
+        type: string
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: 'staging'
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+
+jobs:
+  deploy-to-s3:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Deploy model to environment
+      run: |
+        SOURCE_PATH="s3://${{ secrets.S3_MODEL_BUCKET }}/models/${{ github.event.inputs.model_version }}/"
+        TARGET_PATH="s3://${{ secrets.S3_MODEL_BUCKET }}/environments/${{ github.event.inputs.environment }}/"
+        
+        # Check if source model exists
+        if aws s3 ls $SOURCE_PATH > /dev/null 2>&1; then
+          echo "✅ Found model version: ${{ github.event.inputs.model_version }}"
+          
+          # Copy model to environment path
+          aws s3 sync $SOURCE_PATH $TARGET_PATH --delete
+          
+          # Create deployment metadata
+          echo "{
+            \"model_version\": \"${{ github.event.inputs.model_version }}\",
+            \"environment\": \"${{ github.event.inputs.environment }}\",
+            \"deployed_at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",
+            \"deployed_by\": \"${{ github.actor }}\",
+            \"workflow_run\": \"${{ github.run_id }}\"
+          }" > deployment-info.json
+          
+          aws s3 cp deployment-info.json s3://${{ secrets.S3_MODEL_BUCKET }}/environments/${{ github.event.inputs.environment }}/deployment-info.json
+          
+          echo "🚀 Model deployed successfully!"
+          echo "📍 Environment: ${{ github.event.inputs.environment }}"
+          echo "📦 Model Version: ${{ github.event.inputs.model_version }}"
+          echo "🔗 S3 Path: $TARGET_PATH"
+        else
+          echo "❌ Model version not found: ${{ github.event.inputs.model_version }}"
+          exit 1
+        fi
+    
+    - name: Update model registry
+      run: |
+        echo "Model deployment completed:"
+        echo "- Version: ${{ github.event.inputs.model_version }}"
+        echo "- Environment: ${{ github.event.inputs.environment }}"
+        echo "- S3 Path: s3://${{ secrets.S3_MODEL_BUCKET }}/environments/${{ github.event.inputs.environment }}/"

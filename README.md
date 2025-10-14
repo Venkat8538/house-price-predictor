@@ -56,7 +56,7 @@ To begin, ensure the following tools are installed on your system:
 3. **Setup Python Virtual Environment using UV:**
 
    ```bash
-   uv venv --python python3.11
+   uv venv --python python3.13.3
    source .venv/bin/activate
    ```
 
@@ -64,6 +64,7 @@ To begin, ensure the following tools are installed on your system:
 
    ```bash
    uv pip install -r requirements.txt
+   
    ```
 
 ---
@@ -132,6 +133,12 @@ python src/models/train_model.py   --config configs/model_config.yaml   --data d
 ```
 
 ---
+
+docker image build -t fastapi .
+docker run -idtP fastapi
+docker ps -l
+docker run --rm -it fastapi bash
+
 
 
 ## Building FastAPI and Streamlit 
