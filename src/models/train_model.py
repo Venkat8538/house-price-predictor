@@ -108,6 +108,7 @@ def main(args):
             mlflow.sklearn.log_model(model, "tuned_model")
 
         # Save model locally
+        model_name = model_cfg['name']
         save_path = f"{args.models_dir}/trained/{model_name}.pkl"
         joblib.dump(model, save_path)
         logger.info(f"Saved enhanced model to: {save_path}")
