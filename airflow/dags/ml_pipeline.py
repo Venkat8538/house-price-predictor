@@ -38,7 +38,7 @@ feature_engineering = BashOperator(
 # Task 3: Model Training & Registration
 model_training = BashOperator(
     task_id='model_training',
-    bash_command='cd /opt/airflow/ml_project && python src/models/train_model.py --config configs/model_config.yaml --data data/processed/featured_house_data.csv --models-dir models --mlflow-tracking-uri http://host.docker.internal:5555',
+    bash_command='cd /opt/airflow/ml_project && python src/models/train_model.py --config configs/model_config.yaml --data data/processed/featured_house_data.csv --models-dir models',
     dag=dag
 )
 
