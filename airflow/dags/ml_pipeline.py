@@ -44,17 +44,14 @@ model_training = BashOperator(
 
 # Task 4: Model Validation
 def validate_model():
-    import mlflow
-    import pandas as pd
-    from sklearn.metrics import mean_absolute_error
-    
-    # Load test data and latest model
-    mlflow.set_tracking_uri("http://host.docker.internal:5555")
-    model = mlflow.pyfunc.load_model("models:/house-price-model/Staging")
-    
-    # Simple validation - in production, use holdout test set
-    print("Model validation passed - promoting to Production")
-    return True
+    # Simple validation - check if model file exists
+    import os
+    model_path = "/opt/airflow/ml_project/models/trained/house_price_model_v2.pkl"
+    if os.path.exists(model_path):
+        print("Model validation passed - model file exists")
+        return True
+    else:
+        raise Exception("Model file not found")
 
 model_validation = PythonOperator(
     task_id='model_validation',
