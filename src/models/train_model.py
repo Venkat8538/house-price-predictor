@@ -4,8 +4,8 @@ import numpy as np
 import joblib
 import mlflow
 import mlflow.sklearn
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_absolute_error, r2_score
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.metrics import mean_absolute_error, r2_score, mean_squared_error
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.linear_model import LinearRegression
 import xgboost as xgb
@@ -72,17 +72,34 @@ def main(args):
     model = get_model_instance(model_cfg['best_model'], model_cfg['parameters'])
 
     # Start MLflow run
-    with mlflow.start_run(run_name="final_training"):
-        logger.info(f"Training model: {model_cfg['best_model']}")
+    with mlflow.start_run(run_name="enhanced_training_v2"):
+        logger.info(f"Training enhanced model: {model_cfg['best_model']}")
+        
+        # Perform cross-validation
+        cv_scores = cross_val_score(model, X_train, y_train, cv=5, scoring='r2')
+        cv_mean = float(np.mean(cv_scores))
+        cv_std = float(np.std(cv_scores))
+        
+        # Train final model
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
 
+        # Calculate enhanced metrics
         mae = float(mean_absolute_error(y_test, y_pred))
+        mse = float(mean_squared_error(y_test, y_pred))
+        rmse = float(np.sqrt(mse))
         r2 = float(r2_score(y_test, y_pred))
 
-        # Log params and metrics
+        # Log params and enhanced metrics
         mlflow.log_params(model_cfg['parameters'])
-        mlflow.log_metrics({'mae': mae, 'r2': r2})
+        mlflow.log_metrics({
+            'mae': mae,
+            'mse': mse, 
+            'rmse': rmse,
+            'r2': r2,
+            'cv_r2_mean': cv_mean,
+            'cv_r2_std': cv_std
+        })
 
         # Log and register model
         mlflow.sklearn.log_model(model, "tuned_model")
@@ -120,7 +137,9 @@ def main(args):
             f"Model saved at: {args.models_dir}/trained/{model_name}.pkl\n"
             f"Performance metrics:\n"
             f"  - MAE: {mae:.2f}\n"
-            f"  - R²: {r2:.4f}"
+            f"  - RMSE: {rmse:.2f}\n"
+            f"  - R²: {r2:.4f}\n"
+            f"  - CV R² (mean±std): {cv_mean:.4f}±{cv_std:.4f}"
         )
         client.update_registered_model(name=model_name, description=description)
 
@@ -146,14 +165,12 @@ def main(args):
         # Save model locally
         save_path = f"{args.models_dir}/trained/{model_name}.pkl"
         joblib.dump(model, save_path)
-        logger.info(f"Saved trained model to: {save_path}")
-        logger.info(f"Final MAE: {mae:.2f}, R²: {r2:.4f}")
+        logger.info(f"Saved enhanced model to: {save_path}")
+        logger.info(f"Enhanced metrics - MAE: {mae:.2f}, RMSE: {rmse:.2f}, R²: {r2:.4f}, CV R²: {cv_mean:.4f}±{cv_std:.4f}")
 
 if __name__ == "__main__":
     args = parse_args()
     main(args)
-# Pipeline test
-# Test pipeline fix
-# Test pipeline execution
-# Final pipeline test
-# Complete pipeline fix
+# Enhanced model with cross-validation
+# Added RMSE and MSE metrics
+# Improved model evaluation

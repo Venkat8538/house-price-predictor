@@ -40,3 +40,8 @@ dist/
 # Ignore all .pkl files (models, preprocessors, etc.)
 *.pkl
 
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars

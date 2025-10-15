@@ -1,0 +1,7 @@
+# Copy this file to terraform.tfvars and update values
+
+aws_region      = "us-east-1"
+instance_type   = "t2.micro"
+public_key_path = "~/.ssh/id_rsa.pub"
+github_repo     = "https://github.com/YOUR_USERNAME/house-price-predictor.git"
+project_name    = "house-price-mlops"
