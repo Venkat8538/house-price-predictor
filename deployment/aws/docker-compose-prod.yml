@@ -40,6 +40,9 @@ services:
     restart: always
 
   airflow-webserver:
+    build:
+      context: ../../
+      dockerfile: deployment/aws/Dockerfile.airflow
     <<: *airflow-common
     command: webserver
     ports:
@@ -52,6 +55,9 @@ services:
     restart: always
 
   airflow-scheduler:
+    build:
+      context: ../../
+      dockerfile: deployment/aws/Dockerfile.airflow
     <<: *airflow-common
     command: scheduler
     healthcheck:
