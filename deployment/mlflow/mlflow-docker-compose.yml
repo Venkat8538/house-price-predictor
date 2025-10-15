@@ -2,8 +2,6 @@ version: '3'
 services:
   mlflow:
     image: python:3.9-slim
-    ports:
-      - "5555:5000"
     command: >
       bash -c "pip install mlflow==1.30.0 &&
                mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:///mlflow.db --default-artifact-root /tmp/mlruns"
@@ -13,7 +11,23 @@ services:
       - mlflow_db:/
     environment:
       - MLFLOW_DISABLE_ENV_CREATION=true
+    networks:
+      - mlflow-net
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "5555:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - mlflow
+    networks:
+      - mlflow-net
 
 volumes:
   mlflow_data:
   mlflow_db:
+
+networks:
+  mlflow-net:
