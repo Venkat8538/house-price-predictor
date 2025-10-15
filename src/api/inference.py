@@ -10,13 +10,21 @@ PREPROCESSOR_PATH = "models/trained/preprocessor.pkl"
 try:
     model = joblib.load(MODEL_PATH)
     preprocessor = joblib.load(PREPROCESSOR_PATH)
+    MODEL_LOADED = True
 except Exception as e:
-    raise RuntimeError(f"Error loading model or preprocessor: {str(e)}")
+    print(f"Warning: Model files not found: {str(e)}")
+    print("Models will be loaded after training pipeline completes")
+    model = None
+    preprocessor = None
+    MODEL_LOADED = False
 
 def predict_price(request: HousePredictionRequest) -> PredictionResponse:
     """
     Predict house price based on input features.
     """
+    if not MODEL_LOADED:
+        raise RuntimeError("Model not available. Please run the training pipeline first.")
+    
     # Prepare input data
     input_data = pd.DataFrame([request.dict()])
     input_data['house_age'] = datetime.now().year - input_data['year_built']

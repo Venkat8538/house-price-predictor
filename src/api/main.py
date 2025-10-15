@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from inference import predict_price, batch_predict
+from inference import predict_price, batch_predict, MODEL_LOADED
 from schemas import HousePredictionRequest, PredictionResponse
 
 # Initialize FastAPI app with metadata
@@ -35,7 +35,7 @@ app.add_middleware(
 # Health check endpoint
 @app.get("/health", response_model=dict)
 async def health_check():
-    return {"status": "healthy", "model_loaded": True}
+    return {"status": "healthy", "model_loaded": MODEL_LOADED}
 
 # Prediction endpoint
 @app.post("/predict", response_model=PredictionResponse)
