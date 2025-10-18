@@ -1,0 +1,13 @@
+# AWS Configuration
+aws_region = "us-east-1"
+
+# Project Configuration
+project_name = "house-price"
+environment  = "dev"
+
+# SageMaker Studio (set to true if you want Studio - adds ~$50/month cost)
+create_studio_domain = false
+
+# VPC Configuration (required only if create_studio_domain = true)
+# vpc_id = "vpc-xxxxxxxxx"
+# subnet_ids = ["subnet-xxxxxxxxx", "subnet-yyyyyyyyy"]

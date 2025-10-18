@@ -1,0 +1,13 @@
+FROM python:3.11-slim
+
+WORKDIR /opt/ml/code
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install -r requirements.txt sagemaker
+
+# Copy source code
+COPY src/ ./src/
+
+# SageMaker entry point
+ENV SAGEMAKER_PROGRAM src/models/train_model.py

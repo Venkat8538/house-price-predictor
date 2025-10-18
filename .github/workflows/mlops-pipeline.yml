@@ -1,0 +1,19 @@
+name: MLOps Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  trigger-airflow:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Trigger Airflow DAG
+      run: |
+        curl -X POST \
+          -H "Content-Type: application/json" \
+          -u admin:admin \
+          "http://airflow.mlops.local/api/v1/dags/complete_mlops_pipeline/dagRuns" \
+          -d '{"conf": {"github_sha": "${{ github.sha }}"}}'
