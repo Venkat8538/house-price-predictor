@@ -80,8 +80,20 @@ def process_data(input_file, output_file):
     return df_cleaned
 
 if __name__ == "__main__":
-    # Example usage
-    process_data(
-        input_file="data/raw/house_data.csv", 
-        output_file="data/processed/cleaned_house_data.csv"
-    )
+    import os
+    import sys
+    
+    # SageMaker paths
+    input_path = "/opt/ml/processing/input"
+    output_path = "/opt/ml/processing/output"
+    
+    # Find CSV file in input directory
+    input_files = [f for f in os.listdir(input_path) if f.endswith('.csv')]
+    if not input_files:
+        print("No CSV files found in input directory")
+        sys.exit(1)
+    
+    input_file = os.path.join(input_path, input_files[0])
+    output_file = os.path.join(output_path, "cleaned_house_data.csv")
+    
+    process_data(input_file, output_file)

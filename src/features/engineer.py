@@ -101,13 +101,21 @@ def run_feature_engineering(input_file, output_file, preprocessor_file):
     return df_transformed
 
 if __name__ == "__main__":
-    import argparse
+    import os
+    import sys
     
-    parser = argparse.ArgumentParser(description='Feature engineering for housing data.')
-    parser.add_argument('--input', required=True, help='Path to cleaned CSV file')
-    parser.add_argument('--output', required=True, help='Path for output CSV file (engineered features)')
-    parser.add_argument('--preprocessor', required=True, help='Path for saving the preprocessor')
+    # SageMaker paths
+    input_path = "/opt/ml/processing/input"
+    output_path = "/opt/ml/processing/output"
     
-    args = parser.parse_args()
+    # Find CSV file in input directory
+    input_files = [f for f in os.listdir(input_path) if f.endswith('.csv')]
+    if not input_files:
+        print("No CSV files found in input directory")
+        sys.exit(1)
     
-    run_feature_engineering(args.input, args.output, args.preprocessor)
+    input_file = os.path.join(input_path, input_files[0])
+    output_file = os.path.join(output_path, "featured_house_data.csv")
+    preprocessor_file = os.path.join(output_path, "preprocessor.pkl")
+    
+    run_feature_engineering(input_file, output_file, preprocessor_file)

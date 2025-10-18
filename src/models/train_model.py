@@ -115,8 +115,42 @@ def main(args):
         logger.info(f"Enhanced metrics - MAE: {mae:.2f}, RMSE: {rmse:.2f}, R²: {r2:.4f}, CV R²: {cv_mean:.4f}±{cv_std:.4f}")
 
 if __name__ == "__main__":
-    args = parse_args()
-    main(args)
+    import os
+    import sys
+    
+    # SageMaker training environment
+    input_path = "/opt/ml/input/data/training"
+    model_path = "/opt/ml/model"
+    
+    # Find CSV file in input directory
+    input_files = [f for f in os.listdir(input_path) if f.endswith('.csv')]
+    if not input_files:
+        print("No CSV files found in training input directory")
+        sys.exit(1)
+    
+    data_file = os.path.join(input_path, input_files[0])
+    
+    # Load and train model
+    data = pd.read_csv(data_file)
+    X = data.drop(columns=['price'])
+    y = data['price']
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    # Train XGBoost model
+    model = xgb.XGBRegressor(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+    
+    # Save model
+    joblib.dump(model, os.path.join(model_path, "house_price_model.pkl"))
+    
+    # Log metrics
+    y_pred = model.predict(X_test)
+    mae = float(mean_absolute_error(y_test, y_pred))
+    r2 = float(r2_score(y_test, y_pred))
+    
+    logger.info(f"Model trained - MAE: {mae:.2f}, R²: {r2:.4f}")
+    print(f"Model saved to {model_path}")
+    print(f"MAE: {mae:.2f}, R²: {r2:.4f}")
 # Enhanced model with cross-validation
 # Added RMSE and MSE metrics
 # Improved model evaluation
