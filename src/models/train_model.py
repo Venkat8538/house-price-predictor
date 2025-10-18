@@ -13,9 +13,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
-    # SageMaker training environment
-    input_path = "/opt/ml/input/data/training"
-    model_path = "/opt/ml/model"
+    # SageMaker processing environment
+    input_path = "/opt/ml/processing/input"
+    model_path = "/opt/ml/processing/output"
     
     logger.info(f"Looking for CSV files in: {input_path}")
     

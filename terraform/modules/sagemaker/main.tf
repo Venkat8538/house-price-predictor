@@ -111,36 +111,42 @@ resource "aws_sagemaker_pipeline" "house_price_pipeline" {
       },
       {
         Name = "TrainModel"
-        Type = "Training"
+        Type = "Processing"
         DependsOn = ["FeatureEngineering"]
         Arguments = {
-          AlgorithmSpecification = {
-            TrainingImage = var.ecr_repository_url
-            TrainingInputMode = "File"
+          ProcessingResources = {
+            ClusterConfig = {
+              InstanceType = "ml.m5.large"
+              InstanceCount = 1
+              VolumeSizeInGB = 30
+            }
           }
-          InputDataConfig = [
+          AppSpecification = {
+            ImageUri = var.ecr_repository_url
+            ContainerEntrypoint = ["python3", "src/models/train_model.py"]
+          }
+          ProcessingInputs = [
             {
-              ChannelName = "training"
-              DataSource = {
-                S3DataSource = {
-                  S3DataType = "S3Prefix"
-                  S3Uri = "s3://${var.s3_bucket_name}/data/featured/"
-                  S3DataDistributionType = "FullyReplicated"
-                }
+              InputName = "training-data"
+              S3Input = {
+                S3Uri = "s3://${var.s3_bucket_name}/data/featured/"
+                LocalPath = "/opt/ml/processing/input"
+                S3DataType = "S3Prefix"
+                S3InputMode = "File"
               }
-              ContentType = "text/csv"
             }
           ]
-          OutputDataConfig = {
-            S3OutputPath = "s3://${var.s3_bucket_name}/models/"
-          }
-          ResourceConfig = {
-            InstanceType = "ml.m5.large"
-            InstanceCount = 1
-            VolumeSizeInGB = 30
-          }
-          StoppingCondition = {
-            MaxRuntimeInSeconds = 3600
+          ProcessingOutputConfig = {
+            Outputs = [
+              {
+                OutputName = "model"
+                S3Output = {
+                  S3Uri = "s3://${var.s3_bucket_name}/models/"
+                  LocalPath = "/opt/ml/processing/output"
+                  S3UploadMode = "EndOfJob"
+                }
+              }
+            ]
           }
           RoleArn = var.sagemaker_execution_role_arn
         }
