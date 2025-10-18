@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 
-# SageMaker container for AMD64 architecture
+# SageMaker container for AMD64 architecture - OIDC fixed
 WORKDIR /opt/ml/code
 
 # Install dependencies

@@ -25,3 +25,13 @@ variable "sagemaker_execution_role_arn" {
   description = "ARN of the SageMaker execution role"
   type        = string
 }
+
+variable "ecr_repository_url" {
+  description = "ECR repository URL for container images"
+  type        = string
+}
+
+variable "s3_bucket_name" {
+  description = "S3 bucket name for data and models"
+  type        = string
+}

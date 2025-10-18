@@ -18,6 +18,11 @@ output "model_package_group_name" {
   value       = module.sagemaker.model_package_group_name
 }
 
+output "sagemaker_pipeline_name" {
+  description = "SageMaker pipeline name"
+  value       = module.sagemaker.pipeline_name
+}
+
 output "eventbridge_rule_name" {
   description = "EventBridge rule name for pipeline triggers"
   value       = module.eventbridge.rule_name
