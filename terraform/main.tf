@@ -58,6 +58,7 @@ module "sagemaker" {
   sagemaker_execution_role_arn  = module.iam.sagemaker_execution_role_arn
   ecr_repository_url            = module.ecr.repository_url
   s3_bucket_name                = module.s3.bucket_name
+  aws_region                    = var.aws_region
 }
 
 # EventBridge Module

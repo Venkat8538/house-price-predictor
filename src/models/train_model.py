@@ -7,6 +7,11 @@ from sklearn.metrics import mean_absolute_error, r2_score
 import logging
 import os
 import sys
+import json
+
+# Add parent directory to path for imports
+sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+from version import versioning
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -43,10 +48,35 @@ if __name__ == "__main__":
     model = xgb.XGBRegressor(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
     
-    # Save model
+    # Get model version
+    model_version = versioning.get_version()
+    logger.info(f"Model version: {model_version}")
+    
+    # Save model with version
     model_file = os.path.join(model_path, "house_price_model.pkl")
     joblib.dump(model, model_file)
     logger.info(f"Model saved to: {model_file}")
+    
+    # Create versioned tar.gz for SageMaker
+    import tarfile
+    tar_file = os.path.join(model_path, "model.tar.gz")
+    with tarfile.open(tar_file, "w:gz") as tar:
+        tar.add(model_file, arcname="house_price_model.pkl")
+    logger.info(f"Model tar.gz created: {tar_file}")
+    
+    # Save version metadata
+    version_metadata = {
+        "version": model_version,
+        "git_commit": versioning.get_git_commit(),
+        "timestamp": versioning.get_timestamp(),
+        "model_type": "XGBRegressor",
+        "metrics": {"mae": mae, "r2": r2}
+    }
+    
+    metadata_file = os.path.join(model_path, "version_metadata.json")
+    with open(metadata_file, 'w') as f:
+        json.dump(version_metadata, f, indent=2)
+    logger.info(f"Version metadata saved: {metadata_file}")
     
     # Log metrics
     y_pred = model.predict(X_test)
@@ -55,6 +85,7 @@ if __name__ == "__main__":
     
     logger.info(f"Model trained - MAE: {mae:.2f}, R²: {r2:.4f}")
     print(f"Training completed successfully!")
+    print(f"Model Version: {model_version}")
     print(f"MAE: {mae:.2f}, R²: {r2:.4f}")
     print(f"Model saved to {model_path}")
     
