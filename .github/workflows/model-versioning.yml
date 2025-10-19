@@ -8,9 +8,10 @@ on:
 
 env:
   AWS_REGION: us-east-1
+  ECR_REPOSITORY: house-price-mlops
 
 jobs:
-  trigger-pipeline:
+  build-and-trigger:
     runs-on: ubuntu-latest
     
     permissions:
@@ -18,11 +19,29 @@ jobs:
       contents: read
     
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: arn:aws:iam::027419661856:role/GitHubActionsRole
         aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Login to ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+    
+    - name: Build and push SageMaker image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build --platform linux/amd64 -f Dockerfile.sagemaker -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker build --platform linux/amd64 -f Dockerfile.sagemaker -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        echo "Image pushed: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
     
     - name: Trigger SageMaker Pipeline
       run: |
