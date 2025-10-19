@@ -35,7 +35,7 @@ resource "aws_iam_role_policy_attachment" "github_actions_ecr" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser"
 }
 
-# Add S3 permissions for GitHub Actions
+# Add S3 and SageMaker permissions for GitHub Actions
 resource "aws_iam_role_policy" "github_actions_s3" {
   name = "GitHubActionsS3Policy"
   role = aws_iam_role.github_actions.id
@@ -55,6 +55,14 @@ resource "aws_iam_role_policy" "github_actions_s3" {
           module.s3.bucket_arn,
           "${module.s3.bucket_arn}/*"
         ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sagemaker:StartPipelineExecution",
+          "sagemaker:DescribePipelineExecution"
+        ]
+        Resource = "*"
       }
     ]
   })
