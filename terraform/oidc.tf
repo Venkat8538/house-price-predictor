@@ -34,3 +34,28 @@ resource "aws_iam_role_policy_attachment" "github_actions_ecr" {
   role       = aws_iam_role.github_actions.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser"
 }
+
+# Add S3 permissions for GitHub Actions
+resource "aws_iam_role_policy" "github_actions_s3" {
+  name = "GitHubActionsS3Policy"
+  role = aws_iam_role.github_actions.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          module.s3.bucket_arn,
+          "${module.s3.bucket_arn}/*"
+        ]
+      }
+    ]
+  })
+}
