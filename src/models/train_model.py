@@ -9,9 +9,20 @@ import os
 import sys
 import json
 
-# Add parent directory to path for imports
-sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
-from version import versioning
+# Simple versioning for SageMaker container
+def get_git_commit():
+    """Get git commit from environment or return local"""
+    return os.getenv("GITHUB_SHA", "local")[:8]
+
+def get_version():
+    """Generate version string"""
+    git_hash = get_git_commit()
+    return f"v1.0.0-{git_hash}"
+
+def get_timestamp():
+    """Get timestamp"""
+    import datetime
+    return datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -49,7 +60,7 @@ if __name__ == "__main__":
     model.fit(X_train, y_train)
     
     # Get model version
-    model_version = versioning.get_version()
+    model_version = get_version()
     logger.info(f"Model version: {model_version}")
     
     # Save model with version
@@ -67,8 +78,8 @@ if __name__ == "__main__":
     # Save version metadata
     version_metadata = {
         "version": model_version,
-        "git_commit": versioning.get_git_commit(),
-        "timestamp": versioning.get_timestamp(),
+        "git_commit": get_git_commit(),
+        "timestamp": get_timestamp(),
         "model_type": "XGBRegressor",
         "metrics": {"mae": mae, "r2": r2}
     }
