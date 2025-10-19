@@ -75,6 +75,11 @@ if __name__ == "__main__":
         tar.add(model_file, arcname="house_price_model.pkl")
     logger.info(f"Model tar.gz created: {tar_file}")
     
+    # Log metrics
+    y_pred = model.predict(X_test)
+    mae = float(mean_absolute_error(y_test, y_pred))
+    r2 = float(r2_score(y_test, y_pred))
+    
     # Save version metadata
     version_metadata = {
         "version": model_version,
@@ -88,11 +93,6 @@ if __name__ == "__main__":
     with open(metadata_file, 'w') as f:
         json.dump(version_metadata, f, indent=2)
     logger.info(f"Version metadata saved: {metadata_file}")
-    
-    # Log metrics
-    y_pred = model.predict(X_test)
-    mae = float(mean_absolute_error(y_test, y_pred))
-    r2 = float(r2_score(y_test, y_pred))
     
     logger.info(f"Model trained - MAE: {mae:.2f}, R²: {r2:.4f}")
     print(f"Training completed successfully!")
