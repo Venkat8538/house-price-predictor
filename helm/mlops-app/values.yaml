@@ -1,7 +1,7 @@
 fastapi:
   image:
     repository: 027419661856.dkr.ecr.us-east-1.amazonaws.com/house-price-mlops
-    tag: fastapi-2cea4e35fd44181d92a1c031fe4d83d102abbb3a
+    tag: fastapi-b7bc4e7727a092e809cb60f052f5338eb9114a1c
     pullPolicy: Always
   service:
     type: ClusterIP
@@ -17,7 +17,7 @@ fastapi:
 streamlit:
   image:
     repository: 027419661856.dkr.ecr.us-east-1.amazonaws.com/house-price-mlops
-    tag: streamlit-2cea4e35fd44181d92a1c031fe4d83d102abbb3a
+    tag: streamlit-b7bc4e7727a092e809cb60f052f5338eb9114a1c
     pullPolicy: Always
   service:
     type: ClusterIP
