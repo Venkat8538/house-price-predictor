@@ -54,7 +54,7 @@ ingress:
           service: streamlit-service
 
 nodeSelector:
-  node-type: ml-nodes
+  role: ml-workload
 
 tolerations:
   - key: "ml-workload"
