@@ -1,6 +1,4 @@
 fastapi:
-  image:
-    tag: dev-latest
   resources:
     requests:
       memory: "128Mi"
@@ -10,8 +8,6 @@ fastapi:
       cpu: "250m"
 
 streamlit:
-  image:
-    tag: dev-latest
   resources:
     requests:
       memory: "128Mi"
