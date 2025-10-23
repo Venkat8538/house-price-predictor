@@ -1,0 +1,63 @@
+fastapi:
+  image:
+    repository: 027419661856.dkr.ecr.us-east-1.amazonaws.com/house-price-mlops
+    tag: latest
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 8000
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+streamlit:
+  image:
+    repository: 027419661856.dkr.ecr.us-east-1.amazonaws.com/house-price-mlops
+    tag: latest
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 8501
+  env:
+    API_URL: "http://fastapi-service:8000"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+rbac:
+  create: true
+  serviceAccountName: mlops-app-sa
+
+ingress:
+  enabled: true
+  className: "alb"
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/group.name: mlops
+  hosts:
+    - host: mlops-app.mlops.local
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: fastapi-service
+        - path: /
+          pathType: Prefix
+          service: streamlit-service
+
+nodeSelector:
+  node-type: ml-nodes
+
+tolerations:
+  - key: "ml-workload"
+    operator: "Equal"
+    value: "true"
+    effect: "NoSchedule"

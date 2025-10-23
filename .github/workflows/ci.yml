@@ -1,4 +1,4 @@
-name: Build and Deploy
+name: Build and Deploy Web Apps
 
 on:
   push:
@@ -8,74 +8,70 @@ on:
       - 'streamlit_app/**'
       - 'Dockerfile'
       - 'requirements.txt'
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'src/api/**'
-      - 'streamlit_app/**'
-      - 'Dockerfile'
-      - 'requirements.txt'
+      - 'helm/**'
+
+permissions:
+  id-token: write
+  contents: write
 
 env:
-  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: house-price-mlops
 
 jobs:
-  build-api:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v3
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
       with:
-        username: ${{ env.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+        role-to-assume: arn:aws:iam::027419661856:role/GitHubActionsRole
+        aws-region: ${{ env.AWS_REGION }}
     
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.DOCKERHUB_USERNAME }}/house-price-api
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha,prefix={{branch}}-
+    - name: Login to ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
     
-    - name: Build and push API Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
+    - name: Build and push FastAPI image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:fastapi-$IMAGE_TAG .
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:fastapi .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:fastapi-$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:fastapi
 
-  build-streamlit:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
+    - name: Build and push Streamlit image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:streamlit-$IMAGE_TAG ./streamlit_app
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:streamlit ./streamlit_app
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:streamlit-$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:streamlit
     
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ env.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - name: Update Helm values
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        # Update repository URLs
+        sed -i "s|repository: .*|repository: $ECR_REGISTRY/$ECR_REPOSITORY|g" helm/mlops-app/values.yaml
+        
+        # Update image tags - FastAPI first occurrence
+        sed -i "0,/tag: .*/s//tag: fastapi-$IMAGE_TAG/" helm/mlops-app/values.yaml
+        
+        # Update image tags - Streamlit second occurrence  
+        sed -i "0,/tag: fastapi-$IMAGE_TAG/!s/tag: .*/tag: streamlit-$IMAGE_TAG/" helm/mlops-app/values.yaml
     
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.DOCKERHUB_USERNAME }}/house-price-streamlit
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha,prefix={{branch}}-
-    
-    - name: Build and push Streamlit Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./streamlit_app
-        file: ./streamlit_app/Dockerfile
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
+    - name: Commit updated Helm values
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add helm/
+        git diff --staged --quiet || git commit -m "Update Helm image tags to ${{ github.sha }}"
+        git push

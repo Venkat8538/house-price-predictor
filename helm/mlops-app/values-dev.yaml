@@ -1,0 +1,32 @@
+fastapi:
+  image:
+    tag: dev-latest
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+
+streamlit:
+  image:
+    tag: dev-latest
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+
+ingress:
+  hosts:
+    - host: mlops-app-dev.mlops.local
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: fastapi-service
+        - path: /
+          pathType: Prefix
+          service: streamlit-service

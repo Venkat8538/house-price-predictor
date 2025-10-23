@@ -1,0 +1,28 @@
+fastapi:
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+streamlit:
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+
+ingress:
+  hosts:
+    - host: mlops-app.mlops.local
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: fastapi-service
+        - path: /
+          pathType: Prefix
+          service: streamlit-service
